@@ -6,6 +6,9 @@ from sklearn.cross_validation import train_test_split
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
+from sklearn.cross_validation import StratifiedShuffleSplit
+from sklearn.metrics import roc_auc_score
+from itertools import permutations
 
 def data_read(filepath, *features):
 	"""
@@ -90,7 +93,7 @@ def plot_confusion_matrix_new(cm_normalized, cm, NetworkTypeLabels, sub_to_main_
     ax.set_xlabel('Predicted label')
     plt.show()
 
-def classification(features, labels, feature_names, isSubType):
+def multiclass_classification(features, labels, feature_names, isSubType):
 	
 	v = DictVectorizer(sparse=False)
 	sub_to_main_type = dict((SubType,NetworkType) for gml, NetworkType, SubType in labels)
@@ -102,6 +105,7 @@ def classification(features, labels, feature_names, isSubType):
 		Y = [NetworkType for gml, NetworkType, SubType in labels]
 		NetworkTypeLabels = sorted(list(set(Y))) # for NetworkType
 
+	print Y
 	X = v.fit_transform(features)
 	X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
 
@@ -121,15 +125,75 @@ def classification(features, labels, feature_names, isSubType):
 	plot_confusion_matrix_new(cm_normalized_filtered, cm, NetworkTypeLabels, sub_to_main_type, isSubType=isSubType)
 
 
+def AUC(features, Y):
+	"""
+	Returns an AUC score for a given pair of classes.
+	"""
+	v = DictVectorizer(sparse=False)
+	X = v.fit_transform(features)
+	Y = np.array(Y)
+	print "positive: %d negative: %d"%(np.count_nonzero(Y),len(Y)-np.count_nonzero(Y))
+	sss = StratifiedShuffleSplit(Y, 3, test_size=0.3, random_state=0)
+	for train_index, test_index in sss:
+		X_train, X_test = X[train_index], X[test_index]
+		y_train, y_test = Y[train_index], Y[test_index]
+
+	random_forest = RandomForestClassifier()
+	random_forest.fit(X_train, y_train)
+
+	y_pred = random_forest.predict(X_test)
+	print "y_pred:",y_pred
+	print "y_test:",y_test
+	return roc_auc_score(y_test, y_pred)
+
+def filter_pair(features, labels, pair):
+	"""
+	Filters out the features and labels for a given pair of classes.
+	labels are conveted into either 1(positive) or 0(negative).
+	"""
+	f_filtered = []
+	l_filtered = []
+	positive, negative = pair
+	for feature, label in zip(features,labels):
+		if label == positive:
+			f_filtered.append(feature)
+			l_filtered.append(1)
+		elif label == negative:
+			f_filtered.append(feature)
+			l_filtered.append(0)
+
+	return f_filtered, l_filtered
+
+
+
+def binary_classification(features, labels, feature_names, isSubType):
+
+	sub_to_main_type = dict((SubType,NetworkType) for gml, NetworkType, SubType in labels)
+	
+	if isSubType:
+		Y = [SubType for gml, NetworkType, SubType in labels]
+		NetworkTypeLabels = sorted(list(set(Y)), key=lambda sub_type: sub_to_main_type[sub_type])
+	else:
+		Y = [NetworkType for gml, NetworkType, SubType in labels]
+		NetworkTypeLabels = sorted(list(set(Y))) # for NetworkType
+
+	pairs = permutations(set(Y),r=2)
+	for pair in pairs:
+		print "------------------------------------------------------"
+		print pair
+		fs,ls = filter_pair(features, Y, pair)
+		print "AUC: %f"%AUC(fs, ls)
 
 def main():
-	network_dict = data_read("features.csv","NetworkType","SubType","ClusteringCoefficient","MeanGeodesicPath",\
+	network_dict = data_read("features.csv","NetworkType","SubType","ClusteringCoefficient","MeanGeodesicDistance",\
 							 "Modularity","m4_1","m4_2","m4_3","m4_4","m4_5","m4_6")
+
 	feature_names = ["ClusteringCoefficient","MeanGeodesicPath","Modularity","m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"]
 	network_dict = filter_float(network_dict)
 	features,labels = XY_generator(network_dict)
 
-	classification(features, labels, feature_names, isSubType=True)
+	#multiclass_classification(features, labels, feature_names, isSubType=True)
+	binary_classification(features, labels, feature_names, isSubType=False)
 	
 
 if __name__ == "__main__":
