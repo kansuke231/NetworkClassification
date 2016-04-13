@@ -20,7 +20,7 @@ def data_read(filepath, *features):
 	with open(filepath, 'rb') as f:
 		reader = csv.DictReader(f)
 		for row in reader:
-
+			
 			filtered = dict((k,v) for k,v in row.items() if all([(k in features), v, (v != "nan")]))
 			
 			# if filtered lacks some feautres, e.g. not calculated yet.
@@ -36,23 +36,36 @@ def data_read(filepath, *features):
 	return network_dict
 
 
-def plot_3d(data):
+def sort_by_feature(network_dict, feature_names):
+	result = []
+	for k in network_dict.keys():
+		each = []
+		for name in feature_names:
+			entry = network_dict[k][name]
+			if isFloat(entry):
+				each.append(float(entry))
+			else:
+				each.append(entry)
+		result.append(tuple(each))
+	return result
 
-    ts = [t for f1,f2,f3,t in data]
+def plot_3d(data, feature_names):
+    ts = [t for t,f1,f2,f3 in data]
 
     colors = ["y","r","c","b","g","k","m"]
     
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     for t,c in zip(set(ts),colors):
-        xs = [f1 for f1,f2,f3,network_type in data if network_type == t]
-        ys= [f2 for f1,f2,f3,network_type in data if network_type == t]
-        zs = [f3 for f1,f2,f3,network_type in data if network_type == t] 
+        xs = [f1 for network_type,f1,f2,f3 in data if network_type == t]
+        ys = [f2 for network_type,f1,f2,f3 in data if network_type == t]
+        zs = [f3 for network_type,f1,f2,f3 in data if network_type == t]
+        
         ax.plot(xs, ys, zs,"o",c=c,label=t)
     
-    ax.set_xlabel('Modularity')
-    ax.set_ylabel('Mean Geodesic Distance')
-    ax.set_zlabel('Clustering Coefficient')
+    ax.set_xlabel(feature_names[1])
+    ax.set_ylabel(feature_names[2])
+    ax.set_zlabel(feature_names[3])
     ax.legend(loc = 'upper left')
     plt.draw()
     plt.show()
@@ -61,9 +74,12 @@ def plot_3d(data):
 def main():
 	params = sys.argv
 	filepath = params[1]
-	network_dict = data_read(filepath, "NetworkType","ClusteringCoefficient","MeanGeodesicPath","Modularity")
-	network_tuple = [tuple(map(lambda x: float(x) if isFloat(x) else x,network_dict[k].values())) for k in network_dict]
-	plot_3d(network_tuple)
+	feature_names = ["NetworkType","Modularity","ClusteringCoefficient","MeanGeodesicDistance"]
+	#feature_names = ["NetworkType","m4_1","m4_3","m4_6"]
+	network_dict = data_read(filepath, *feature_names)
+	
+	network_tuple = sort_by_feature(network_dict, feature_names)
+	plot_3d(network_tuple, feature_names)
 
 if __name__ == '__main__':
 	main()
