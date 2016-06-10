@@ -2,6 +2,7 @@ import sys
 import csv
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import math
 
 
 
@@ -12,7 +13,7 @@ def isFloat(x):
 	except ValueError:
 		return False
 
-def data_read(filepath, *features):
+def data_read(filepath, *features, **kwargs):
 	"""
 	Read a csv file (features.csv).
 	"""
@@ -29,6 +30,13 @@ def data_read(filepath, *features):
 			elif row["NetworkType"] == "Synthetic":
 				continue
 			#elif row["NetworkType"] == "Biological":
+
+			# below is for extracting only specific kinds of networks
+			elif kwargs:
+				if row["NetworkType"] in kwargs["types"]:
+					gml_name = row[".gmlFile"]
+					network_dict[gml_name] = filtered
+
 			else:
 				gml_name = row[".gmlFile"]
 				network_dict[gml_name] = filtered
@@ -49,6 +57,9 @@ def sort_by_feature(network_dict, feature_names):
 		result.append(tuple(each))
 	return result
 
+def normalize_mgd(network_tuple):
+	return map(lambda (x1,x2,x3,x4,x5): (x1,x2,x3,x4/math.log(x5)) ,network_tuple)
+
 def plot_3d(data, feature_names):
     ts = [t for t,f1,f2,f3 in data]
 
@@ -61,11 +72,12 @@ def plot_3d(data, feature_names):
         ys = [f2 for network_type,f1,f2,f3 in data if network_type == t]
         zs = [f3 for network_type,f1,f2,f3 in data if network_type == t]
         
-        ax.plot(xs, ys, zs,"o",c=c,label=t)
+        ax.plot(xs, ys, zs,"o",c=c,label=t,alpha=0.85)
     
     ax.set_xlabel(feature_names[1])
     ax.set_ylabel(feature_names[2])
     ax.set_zlabel(feature_names[3])
+    #ax.set_zscale("log")
     ax.legend(loc = 'upper left')
     plt.draw()
     plt.show()
@@ -74,11 +86,14 @@ def plot_3d(data, feature_names):
 def main():
 	params = sys.argv
 	filepath = params[1]
-	feature_names = ["NetworkType","Modularity","ClusteringCoefficient","MeanGeodesicDistance"]
+	feature_names = ["NetworkType","Modularity","ClusteringCoefficient","MeanGeodesicDistance","NumberNodes"]
+	#feature_names = ["NetworkType","m4_2","m4_3","m4_4"]
+	#types_tobe_extracted = ["Biological","Transportation"]
 	#feature_names = ["NetworkType","m4_1","m4_3","m4_6"]
-	network_dict = data_read(filepath, *feature_names)
+	network_dict = data_read(filepath, *feature_names)#,types=types_tobe_extracted)
 	
 	network_tuple = sort_by_feature(network_dict, feature_names)
+	network_tuple = normalize_mgd(network_tuple)
 	plot_3d(network_tuple, feature_names)
 
 if __name__ == '__main__':
