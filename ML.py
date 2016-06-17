@@ -11,7 +11,6 @@ import matplotlib.cm as cmx
 import matplotlib.colors
 from mpl_toolkits.mplot3d import Axes3D
 
-from sklearn.cross_validation import train_test_split
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
@@ -21,8 +20,6 @@ from sklearn import manifold
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.metrics.pairwise import euclidean_distances
-
-from sklearn.utils import check_X_y
 
 from unbalanced_dataset.over_sampling import SMOTE
 from unbalanced_dataset.over_sampling import RandomOverSampler
@@ -98,7 +95,7 @@ def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType):
 	else:
 		NetworkTypeLabels = sorted(list(set(Y))) # for NetworkType
 	
-	sss = StratifiedShuffleSplit(Y, 3, test_size=0.35, random_state=0)
+	sss = StratifiedShuffleSplit(Y, 3, test_size=0.4, random_state=0)
 	for train_index, test_index in sss:
 		X_train, X_test = X[train_index], X[test_index]
 		y_train, y_test = Y[train_index], Y[test_index]
@@ -106,17 +103,35 @@ def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType):
 	random_over = RandomOverSampler()
 	random_x, random_y = random_over.fit_transform(X_train, y_train)
 
+	#---- SMOTE -----
+	
+	sm = SMOTE(kind='regular', k=2)
+	sm.fit(X,Y)
+	majority = sm.maj_c_
 
-	# TODO: Implement an over-sampling using SMOTE. 
-	# First, determine which class is the largest amongst others.
-	# Then over-sample the other classes according to the ratio to the largest one.
-	# Then combine the X and Y. Don't forget to eliminate duplications! (maybe use set??)
+	all_X = []
+	all_Y = []
 
-	#majority = 
+	for network_type in NetworkTypeLabels:
+		if network_type != majority:
+			# extract elements of a pair of network types, i.e. the majority and one to be inflated
+			X_extracted = np.concatenate((X[Y == majority],X[Y == network_type]),axis=0)
+			Y_extracted = np.concatenate((Y[Y == majority],Y[Y == network_type]),axis=0)
+			x_tmp, y_tmp = sm.fit_transform(X_extracted,Y_extracted)
+			x = x_tmp[y_tmp == network_type]
+			y = y_tmp[y_tmp == network_type]
 
+			all_X.append(x)
+			all_Y.append(y)
+
+	all_X.append(X[Y == majority])
+	all_Y.append(Y[Y == majority])
+
+	smox,smoy = sm.fit_transform(np.concatenate(tuple(all_X)) ,np.concatenate(tuple(all_Y)))
 
 	random_forest = RandomForestClassifier()
-	random_forest.fit(random_x,random_y)
+	#random_forest.fit(random_x,random_y)
+	random_forest.fit(smox,smoy)
 
 	print "Feature Importance"
 	print sorted(zip(map(lambda x: round(x, 4), random_forest.feature_importances_), feature_names), reverse=True)
