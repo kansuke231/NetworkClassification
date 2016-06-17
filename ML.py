@@ -1,11 +1,15 @@
 import sys
 import csv
 import math
+from collections import Counter
+from itertools import permutations
+
+import numpy as np
+
 import matplotlib.pyplot as plt
 import matplotlib.cm as cmx
 import matplotlib.colors
 from mpl_toolkits.mplot3d import Axes3D
-import numpy as np
 
 from sklearn.cross_validation import train_test_split
 from sklearn.feature_extraction import DictVectorizer
@@ -15,11 +19,13 @@ from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn.metrics import roc_auc_score
 from sklearn import manifold
 from sklearn.decomposition import PCA
-from sklearn.lda import LDA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.metrics.pairwise import euclidean_distances
 
-from itertools import permutations
-from unbalanced_dataset import SMOTE
+from sklearn.utils import check_X_y
+
+from unbalanced_dataset.over_sampling import SMOTE
+from unbalanced_dataset.over_sampling import RandomOverSampler
 
 def data_read(filepath, *features):
 	"""
@@ -70,6 +76,16 @@ def XY_generator(network_dict):
 
 	return X,Y
 
+def XY_filter_unpopular(X, Y, threshold):
+	"""
+	filters out the elements which are unpopular (i.e. # of ys is below threshold)
+	"""
+	counts = Counter(Y)
+	popular = [elem for (elem, count) in filter(lambda (e,c): c > threshold ,counts.most_common())]
+	return np.concatenate(tuple(X[Y == p] for p in popular),axis=0),\
+		   np.concatenate(tuple(Y[Y == p] for p in popular),axis=0)
+	
+
 
 #------------------------------ MultiClass Classification ------------------------------
 def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType):
@@ -82,10 +98,25 @@ def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType):
 	else:
 		NetworkTypeLabels = sorted(list(set(Y))) # for NetworkType
 	
-	X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
+	sss = StratifiedShuffleSplit(Y, 3, test_size=0.35, random_state=0)
+	for train_index, test_index in sss:
+		X_train, X_test = X[train_index], X[test_index]
+		y_train, y_test = Y[train_index], Y[test_index]
+
+	random_over = RandomOverSampler()
+	random_x, random_y = random_over.fit_transform(X_train, y_train)
+
+
+	# TODO: Implement an over-sampling using SMOTE. 
+	# First, determine which class is the largest amongst others.
+	# Then over-sample the other classes according to the ratio to the largest one.
+	# Then combine the X and Y. Don't forget to eliminate duplications! (maybe use set??)
+
+	#majority = 
+
 
 	random_forest = RandomForestClassifier()
-	random_forest.fit(X_train,y_train)
+	random_forest.fit(random_x,random_y)
 
 	print "Feature Importance"
 	print sorted(zip(map(lambda x: round(x, 4), random_forest.feature_importances_), feature_names), reverse=True)
@@ -378,7 +409,7 @@ def matrix_clustering(D, leave_name):
 	fig.savefig('dendrogram.png',bbox_inches='tight')
 
 def main(analysis):
-	network_dict = data_read("features.csv","NetworkType","SubType","ClusteringCoefficient","Modularity",#"MeanGeodesicDistance",\
+	network_dict = data_read("features.csv","NetworkType","SubType","ClusteringCoefficient","Modularity","MeanGeodesicDistance",\
 							 "m4_1","m4_2","m4_3","m4_4","m4_5","m4_6")
 
 	feature_names = ["ClusteringCoefficient","MeanGeodesicPath","Modularity","m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"]
@@ -390,14 +421,16 @@ def main(analysis):
 
 	sub_to_main_type = dict((SubType,NetworkType) for gml, NetworkType, SubType in labels)
 
-	isSubType = False
+	isSubType = True
 
 	if isSubType:
 		Y = np.array([SubType for gml, NetworkType, SubType in labels])
 	else:
 		Y = np.array([NetworkType for gml, NetworkType, SubType in labels])
 
-
+	at_least = 4
+	X,Y = XY_filter_unpopular(X, Y, at_least)
+	
 	# Branches of different analyses
 
 	if analysis == "MultiClass":
