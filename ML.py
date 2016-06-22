@@ -1,5 +1,5 @@
+from misc import *
 import sys
-import csv
 import math
 from collections import Counter
 from itertools import permutations
@@ -24,28 +24,6 @@ from sklearn.metrics.pairwise import euclidean_distances
 from unbalanced_dataset.over_sampling import SMOTE
 from unbalanced_dataset.over_sampling import RandomOverSampler
 
-def data_read(filepath, *features):
-	"""
-	Read a csv file (features.csv).
-	"""
-	network_dict = {}
-	with open(filepath, 'rb') as f:
-		reader = csv.DictReader(f)
-		for row in reader:
-
-			filtered = dict((k,v) for k,v in row.items() if all([(k in features), v, (v != "nan")]))
-			
-			# if filtered lacks some feautres, e.g. not calculated yet.
-			if len(filtered) != len(features):
-				continue
-			elif row["NetworkType"] == "Synthetic":
-				continue
-			#elif row["NetworkType"] == "Biological":
-			else:
-				gml_name = row[".gmlFile"]
-				network_dict[gml_name] = filtered
-
-	return network_dict
 
 
 def filter_float(network_dict):
@@ -85,7 +63,7 @@ def XY_filter_unpopular(X, Y, threshold):
 
 
 #------------------------------ MultiClass Classification ------------------------------
-def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType):
+def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, samplingMethod):
 	"""
 	This functions returns a confusion matrix and NetworkTypeLabels
 	"""
@@ -96,42 +74,50 @@ def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType):
 		NetworkTypeLabels = sorted(list(set(Y))) # for NetworkType
 	
 	sss = StratifiedShuffleSplit(Y, 3, test_size=0.4, random_state=0)
+
 	for train_index, test_index in sss:
 		X_train, X_test = X[train_index], X[test_index]
 		y_train, y_test = Y[train_index], Y[test_index]
 
-	random_over = RandomOverSampler()
-	random_x, random_y = random_over.fit_transform(X_train, y_train)
 
-	#---- SMOTE -----
+	if samplingMethod == "Random":
+		random_over = RandomOverSampler()
+		sampled_x, sampled_y = random_over.fit_transform(X_train, y_train)
+
+	elif samplingMethod == "SMOTE":
+		sm = SMOTE(kind='regular', k=3)
+		sm.fit(X_train, y_train)
+		majority = sm.maj_c_
 	
-	sm = SMOTE(kind='regular', k=2)
-	sm.fit(X,Y)
-	majority = sm.maj_c_
+		all_X = []
+		all_Y = []
+	
+		for network_type in NetworkTypeLabels:
+			if network_type != majority:
+				# extract elements of a pair of network types, i.e. the majority and one to be inflated
+				X_extracted = np.concatenate((X_train[y_train == majority],X_train[y_train == network_type]),axis=0)
+				Y_extracted = np.concatenate((y_train[y_train == majority],y_train[y_train == network_type]),axis=0)
+				x_tmp, y_tmp = sm.fit_transform(X_extracted,Y_extracted)
+				x = x_tmp[y_tmp == network_type]
+				y = y_tmp[y_tmp == network_type]
+				print x.shape, y.shape
+				all_X.append(x)
+				all_Y.append(y)
+	
+		all_X.append(X_train[y_train == majority])
+		all_Y.append(y_train[y_train == majority])
+	
 
-	all_X = []
-	all_Y = []
-
-	for network_type in NetworkTypeLabels:
-		if network_type != majority:
-			# extract elements of a pair of network types, i.e. the majority and one to be inflated
-			X_extracted = np.concatenate((X[Y == majority],X[Y == network_type]),axis=0)
-			Y_extracted = np.concatenate((Y[Y == majority],Y[Y == network_type]),axis=0)
-			x_tmp, y_tmp = sm.fit_transform(X_extracted,Y_extracted)
-			x = x_tmp[y_tmp == network_type]
-			y = y_tmp[y_tmp == network_type]
-
-			all_X.append(x)
-			all_Y.append(y)
-
-	all_X.append(X[Y == majority])
-	all_Y.append(Y[Y == majority])
-
-	smox,smoy = sm.fit_transform(np.concatenate(tuple(all_X)) ,np.concatenate(tuple(all_Y)))
+		Xs = np.concatenate(tuple(all_X))
+		Ys = np.concatenate(tuple(all_Y))
+	
+		sampled_x, sampled_y = sm.fit_transform(Xs,Ys)
+	
+	elif samplingMethod == "None":
+		sampled_x, sampled_y = X_train, y_train
 
 	random_forest = RandomForestClassifier()
-	#random_forest.fit(random_x,random_y)
-	random_forest.fit(smox,smoy)
+	random_forest.fit(sampled_x,sampled_y)
 
 	print "Feature Importance"
 	print sorted(zip(map(lambda x: round(x, 4), random_forest.feature_importances_), feature_names), reverse=True)
@@ -424,7 +410,7 @@ def matrix_clustering(D, leave_name):
 	fig.savefig('dendrogram.png',bbox_inches='tight')
 
 def main(analysis):
-	network_dict = data_read("features.csv","NetworkType","SubType","ClusteringCoefficient","Modularity","MeanGeodesicDistance",\
+	network_dict = data_read("features.csv","NetworkType","SubType","ClusteringCoefficient","Modularity",#"MeanGeodesicDistance",\
 							 "m4_1","m4_2","m4_3","m4_4","m4_5","m4_6")
 
 	feature_names = ["ClusteringCoefficient","MeanGeodesicPath","Modularity","m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"]
@@ -443,13 +429,15 @@ def main(analysis):
 	else:
 		Y = np.array([NetworkType for gml, NetworkType, SubType in labels])
 
-	at_least = 4
+	at_least = 5
 	X,Y = XY_filter_unpopular(X, Y, at_least)
 	
 	# Branches of different analyses
 
 	if analysis == "MultiClass":
-		cm, NetworkTypeLabels = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType)
+		#X,Y = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType)
+		#plot_scikit_lda_3d(X, Y)
+		cm, NetworkTypeLabels = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, "SMOTE")
 		plot_confusion_matrix(cm, NetworkTypeLabels, sub_to_main_type, isSubType)
 
 	elif analysis == "BinaryClass":
