@@ -3,7 +3,6 @@ from misc import *
 from plot import plot_confusion_matrix
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction import DictVectorizer
 from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn.metrics import confusion_matrix
 from unbalanced_dataset.over_sampling import SMOTE
@@ -32,7 +31,7 @@ def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, 
 		sampled_x, sampled_y = random_over.fit_transform(X_train, y_train)
 
 	elif samplingMethod == "SMOTE":
-		sm = SMOTE(kind='regular', k=3)
+		sm = SMOTE(kind='regular', k=3, verbose=False)
 		sm.fit(X_train, y_train)
 		majority = sm.maj_c_
 	
@@ -65,15 +64,16 @@ def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, 
 
 	random_forest = RandomForestClassifier()
 	random_forest.fit(sampled_x,sampled_y)
+	accuracy = random_forest.score(X_test,y_test)
 
 	print "Feature Importance"
 	print sorted(zip(map(lambda x: round(x, 4), random_forest.feature_importances_), feature_names), reverse=True)
 	print "----------------------------------------------------"
-	print "prediction: %f"%random_forest.score(X_test,y_test)
+	print "prediction: %f"%accuracy
 
 	y_pred = random_forest.predict(X_test)
 	cm = confusion_matrix(y_test, y_pred, labels=NetworkTypeLabels)
-	return cm, NetworkTypeLabels
+	return cm, NetworkTypeLabels,accuracy
 
 def main():
 	
@@ -86,7 +86,7 @@ def main():
 
 	#X,Y = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType)
 	#plot_scikit_lda_3d(X, Y)
-	cm, NetworkTypeLabels = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, "SMOTE")
+	cm, NetworkTypeLabels,accuracy = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, "SMOTE")
 	plot_confusion_matrix(cm, NetworkTypeLabels, sub_to_main_type, isSubType)
 
 	

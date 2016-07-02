@@ -69,7 +69,7 @@ def plot_confusion_matrix(cm, NetworkTypeLabels, sub_to_main_type, isSubType):
     for i in range(dim):
     	for j in range(dim):
     		if cm[i][j] != 0.0:
-    			ax.text(j, i, cm[i][j], va='center', ha='center', color = "r", size=10)
+    			ax.text(j, i, cm[i][j], va='center', ha='center', color = "r", size=8)
     
     #ax.set_title("Confusion Matrix")
     f.colorbar(im)
