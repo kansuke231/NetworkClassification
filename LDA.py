@@ -1,3 +1,4 @@
+#!/Users/ikeharakansuke/env/bin/python
 from misc import *
 import sys
 from plot import plot_scikit_lda_3d, plot_scikit_lda
@@ -10,7 +11,7 @@ def LinearDiscriminantAnalysis(X,Y):
 	X_lda_sklearn = sklearn_lda.fit_transform(X, Y)
 	return X_lda_sklearn
 
-def main(analysis):
+def main():
 		
 	column_names = ["NetworkType","SubType","ClusteringCoefficient","Modularity",#"MeanGeodesicDistance",\
 				    "m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"]
@@ -24,10 +25,6 @@ def main(analysis):
 	plot_scikit_lda(X_lda_sklearn, Y)
 
 
-
-
 if __name__ == "__main__":
-	param = sys.argv
-	analysis_type = param[1]
-	main(analysis_type)
+	main()
 

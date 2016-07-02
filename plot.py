@@ -1,3 +1,4 @@
+#!/Users/ikeharakansuke/env/bin/python
 import sys
 import matplotlib.pyplot as plt
 import matplotlib.colors
@@ -239,4 +240,3 @@ if __name__ == '__main__':
 	main()
 
 
-	

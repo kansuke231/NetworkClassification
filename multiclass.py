@@ -1,3 +1,4 @@
+#!/Users/ikeharakansuke/env/bin/python
 from misc import *
 from plot import plot_confusion_matrix
 import numpy as np

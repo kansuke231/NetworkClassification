@@ -1,3 +1,4 @@
+#!/Users/ikeharakansuke/env/bin/python
 from misc import *
 from plot import plot_distance_matrix, MDS_plot
 import numpy as np
@@ -111,7 +112,7 @@ def binary_classification(features, labels, feature_names, isSubType):
 	return np.array(distance_matrix), NetworkTypeLabels
 
 
-def main(analysis):
+def main():
 		
 	column_names = ["NetworkType","SubType","ClusteringCoefficient","Modularity",#"MeanGeodesicDistance",\
 				    "m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"]
@@ -132,8 +133,6 @@ def main(analysis):
 
 
 if __name__ == "__main__":
-	param = sys.argv
-	analysis_type = param[1]
-	main(analysis_type)
+	main()
 
 
