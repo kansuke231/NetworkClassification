@@ -7,6 +7,7 @@ from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn.metrics import confusion_matrix
 from unbalanced_dataset.over_sampling import SMOTE
 from unbalanced_dataset.over_sampling import RandomOverSampler
+from adasyn import ADASYN
 
 
 def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, samplingMethod):
@@ -46,7 +47,6 @@ def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, 
 				x_tmp, y_tmp = sm.fit_transform(X_extracted,Y_extracted)
 				x = x_tmp[y_tmp == network_type]
 				y = y_tmp[y_tmp == network_type]
-				print x.shape, y.shape
 				all_X.append(x)
 				all_Y.append(y)
 	
@@ -58,6 +58,35 @@ def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, 
 		Ys = np.concatenate(tuple(all_Y))
 	
 		sampled_x, sampled_y = sm.fit_transform(Xs,Ys)
+
+	elif samplingMethod == "ADASYN":
+		adsn = ADASYN(k=3,imb_threshold=1.0, ratio=1.0)
+		adsn.fit(X_train, y_train)
+		majority = adsn.maj_class_
+	
+		all_X = []
+		all_Y = []
+	
+		for network_type in NetworkTypeLabels:
+			if network_type != majority:
+				# extract elements of a pair of network types, i.e. the majority and one to be inflated
+				X_extracted = np.concatenate((X_train[y_train == majority],X_train[y_train == network_type]),axis=0)
+				Y_extracted = np.concatenate((y_train[y_train == majority],y_train[y_train == network_type]),axis=0)
+				x_tmp, y_tmp = adsn.fit_transform(X_extracted,Y_extracted)
+				x = x_tmp[y_tmp == network_type]
+				y = y_tmp[y_tmp == network_type]
+				all_X.append(x)
+				all_Y.append(y)
+	
+		all_X.append(X_train[y_train == majority])
+		all_Y.append(y_train[y_train == majority])
+	
+
+		Xs = np.concatenate(tuple(all_X))
+		Ys = np.concatenate(tuple(all_Y))
+	
+		sampled_x, sampled_y = adsn.fit_transform(Xs,Ys)
+
 	
 	elif samplingMethod == "None":
 		sampled_x, sampled_y = X_train, y_train
@@ -86,7 +115,7 @@ def main():
 
 	#X,Y = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType)
 	#plot_scikit_lda_3d(X, Y)
-	cm, NetworkTypeLabels,accuracy = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, "SMOTE")
+	cm, NetworkTypeLabels,accuracy = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, "ADASYN")
 	plot_confusion_matrix(cm, NetworkTypeLabels, sub_to_main_type, isSubType)
 
 	
