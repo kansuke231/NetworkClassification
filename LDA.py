@@ -6,8 +6,8 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.feature_extraction import DictVectorizer
 import numpy as np
 
-def LinearDiscriminantAnalysis(X,Y):
-	sklearn_lda = LDA(n_components=3)
+def LinearDiscriminantAnalysis(X,Y,dimension):
+	sklearn_lda = LDA(n_components=dimension)
 	X_lda_sklearn = sklearn_lda.fit_transform(X, Y)
 	return X_lda_sklearn
 
@@ -20,7 +20,7 @@ def main():
 	at_least = 6
 	X,Y,sub_to_main_type = init("features.csv", column_names, feature_names, isSubType, at_least)
 
-	X_lda_sklearn = LinearDiscriminantAnalysis(X, Y)
+	X_lda_sklearn = LinearDiscriminantAnalysis(X, Y, dimension=3)
 	plot_scikit_lda_3d(X_lda_sklearn, Y)
 	plot_scikit_lda(X_lda_sklearn, Y)
 

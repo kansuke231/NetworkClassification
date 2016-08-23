@@ -90,8 +90,6 @@ def init(filepath, column_names, feature_names, isSubType, at_least):
 
 	sub_to_main_type = dict((SubType,NetworkType) for gml, NetworkType, SubType in labels)
 
-	isSubType = True
-
 	if isSubType:
 		Y = np.array([SubType for gml, NetworkType, SubType in labels])
 	else:

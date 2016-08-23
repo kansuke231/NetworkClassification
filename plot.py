@@ -227,14 +227,16 @@ def main():
 	params = sys.argv
 	filepath = params[1]
 	#feature_names = ["NetworkType","Modularity","ClusteringCoefficient","MeanGeodesicDistance","NumberNodes"]
-	feature_names = ["NetworkType","m4_2","m4_3","m4_4"]
+	#feature_names = ["SubType","m4_1","m4_2","m4_3"]
 	#types_tobe_extracted = ["Biological","Transportation"]
-	#feature_names = ["NetworkType","m4_1","m4_3","m4_6"]
-	network_dict = data_read(filepath, *feature_names)#,types=types_tobe_extracted)
+	feature_names = ["NetworkType","Modularity","ClusteringCoefficient","DegreeAssortativity"]
+	network_dict = data_read(filepath, *feature_names)#types=types_tobe_extracted)
 	
-	network_tuple = sort_by_feature(network_dict, feature_names)
-	#network_tuple = normalize_mgd(network_tuple)
+	network_tuple = sort_by_feature(network_dict, feature_names)#; network_tuple = [x for x in network_tuple if x[0] in ["Bayesian"]]
+	
+    #network_tuple = normalize_mgd(network_tuple)
 	plot_3d(network_tuple, feature_names)
+
 
 if __name__ == '__main__':
 	main()
