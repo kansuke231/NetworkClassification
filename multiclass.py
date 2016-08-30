@@ -81,13 +81,14 @@ def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, 
 	accuracy = random_forest.score(X_test,y_test)
 
 	print "Feature Importance"
-	print sorted(zip(map(lambda x: round(x, 4), random_forest.feature_importances_), feature_names), reverse=True)
+	feature_importances = sorted(zip(map(lambda x: round(x, 4), random_forest.feature_importances_), feature_names), reverse=True)
+	print feature_importances
 	print "----------------------------------------------------"
 	print "prediction: %f"%accuracy
 
 	y_pred = random_forest.predict(X_test)
 	cm = confusion_matrix(y_test, y_pred, labels=NetworkTypeLabels)
-	return cm, NetworkTypeLabels,accuracy
+	return cm, NetworkTypeLabels, accuracy, feature_importances
 
 def main():
 	
@@ -100,7 +101,7 @@ def main():
 
 	#X,Y = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType)
 	#plot_scikit_lda_3d(X, Y)
-	cm, NetworkTypeLabels,accuracy = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, "SMOTE")
+	cm, NetworkTypeLabels,accuracy, feature_importances = multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, "SMOTE")
 	plot_confusion_matrix(cm, NetworkTypeLabels, sub_to_main_type, isSubType)
 
 
