@@ -38,8 +38,8 @@ def multiclass_classification(X, Y, sub_to_main_type, feature_names, isSubType, 
 	elif samplingMethod == "RandomUnder":
 		random_under = RandomUnderSampler()
 		sampled_x, sampled_y = random_under.fit_sample(X_train, y_train)
-		from collections import Counter
-		print Counter(sampled_y)
+		# from collections import Counter
+		# print Counter(sampled_y)
 
 	elif samplingMethod == "SMOTE":
 		sm = SMOTE(kind='regular', k=3)

@@ -25,21 +25,25 @@ def plot_feature_importance(Ls, feature_names):
 	cNorm  = matplotlib.colors.Normalize(vmin=0, vmax=len(freq))
 	scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
 
-	iterate = list(enumerate(freq.keys()))
+	iterate = sorted(list(freq.keys()),key=lambda x: x,reverse=True)
+
 	first = iterate[0]
-	colorVal = scalarMap.to_rgba(first[0])
-	p = plt.bar(range(len(feature_names)), freq[first[1]],  0.35, color=colorVal)
-	prev = freq[first[1]] # previous stack
+	colorVal = scalarMap.to_rgba(0)
+	p = plt.bar(range(len(feature_names)), freq[first],  0.35, color=colorVal)
+	prev = freq[first] # previous stack
 
 	ps = [p] # storing axis objects
 
-	for i,k in iterate[1:]:
-		colorVal = scalarMap.to_rgba(i)
+	for i,k in enumerate(iterate[1:]):
+		colorVal = scalarMap.to_rgba(i+1)
 		p = plt.bar(range(len(feature_names)), freq[k],  0.35, color=colorVal, bottom=prev)
 		prev = map(lambda x: x[0]+x[1] , zip(prev,freq[k]))
 		ps.append(p)
 
-	plt.legend(ps,freq.keys(), bbox_to_anchor=(1.1, 0.4),prop={'size':12})
+	plt.legend(ps,iterate, bbox_to_anchor=(1.12, 0.4),prop={'size':12})
+	plt.xlabel('Feature Importance')
+    plt.ylabel('Frequency')
+
 	plt.show()
 
 def sum_confusion_matrix(X, Y, sub_to_main_type, feature_names, isSubType, samplingMethod, N):
@@ -58,15 +62,15 @@ def main():
 	column_names = ["NetworkType","SubType","ClusteringCoefficient","Modularity","DegreeAssortativity",#"MeanGeodesicDistance",\
 				    "m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"]
 	feature_names = ["ClusteringCoefficient","Modularity","DegreeAssortativity","m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"] #"MeanGeodesicDistance"
-	isSubType = False
+	isSubType = True
 	at_least = 6
 	X,Y,sub_to_main_type = init("features.csv", column_names, feature_names, isSubType, at_least)
 	N = 100
 	
-	Matrix, NetworkTypeLabels, sum_accuracy, list_important_features = sum_confusion_matrix(X, Y, sub_to_main_type, feature_names, isSubType, "None", N)
-	plot_feature_importance(list_important_features, feature_names)
+	Matrix, NetworkTypeLabels, sum_accuracy, list_important_features = sum_confusion_matrix(X, Y, sub_to_main_type, feature_names, isSubType, "SMOTE", N)
 	average_matrix = np.array(map(lambda row: map(lambda e: e/N ,row), Matrix))
 	print "average accuracy: %f"%(float(sum_accuracy)/float(N))
+	plot_feature_importance(list_important_features, feature_names)
 	plot_confusion_matrix(average_matrix, NetworkTypeLabels, sub_to_main_type, isSubType)
 	
 	
