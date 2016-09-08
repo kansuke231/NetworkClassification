@@ -181,64 +181,110 @@ def plot_scikit_lda_3d(X, Y):
     plt.draw()
     plt.show()
 
+
+
 def matrix_clustering(D, leave_name):
-	import pylab
-	import scipy.cluster.hierarchy as sch
+    import pylab
+    import scipy.cluster.hierarchy as sch
+    # Compute and plot first dendrogram.
+    fig = pylab.figure(figsize=(10,10))
+    ax1 = fig.add_axes([0.00, 0.1, 0.2, 0.6])
+    Y = sch.linkage(D)#, method='centroid')
+    Z1 = sch.dendrogram(Y, orientation='right')
+    ax1.set_xticks([])
+    ax1.set_yticks([])
 	
-	# Compute and plot first dendrogram.
-	fig = pylab.figure(figsize=(20,20))
-	ax1 = fig.add_axes([0.00,0.1,0.2,0.6])
-	Y = sch.linkage(D, method='centroid')
-	Z1 = sch.dendrogram(Y, orientation='right')
-	ax1.set_xticks([])
-	ax1.set_yticks([])
+    # Compute and plot second dendrogram.
+    ax2 = fig.add_axes([0.3,0.71,0.6,0.05])
+    Y = sch.linkage(D)#, method='centroid')
+    Z2 = sch.dendrogram(Y)
+    ax2.set_xticks([])
+    ax2.set_yticks([])
 	
-	# Compute and plot second dendrogram.
-	ax2 = fig.add_axes([0.3,0.71,0.6,0.05])
-	Y = sch.linkage(D, method='centroid')
-	Z2 = sch.dendrogram(Y)
-	ax2.set_xticks([])
-	ax2.set_yticks([])
-	
-	# Plot distance matrix.
-	axmatrix = fig.add_axes([0.3,0.1,0.6,0.6])
-	idx1 = Z1['leaves']
-	idx2 = Z2['leaves']
-	D = D[idx1,:]
-	D = D[:,idx2]
-	im = axmatrix.matshow(D, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu)
+    # Plot distance matrix.
+    axmatrix = fig.add_axes([0.3,0.1,0.6,0.6])
+    idx1 = Z1['leaves']
+    idx2 = Z2['leaves']
+    print D
+    D = D[idx1,:]
+    D = D[:,idx2]
+    im = axmatrix.matshow(D, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu)
 
-	# mapping from an index to an axis label (gml file name, NetworkType, SubType)
-	# axis_labels = [leave_name[i] for i in idx1]
+    # mapping from an index to an axis label (gml file name, NetworkType, SubType)
+    axis_labels = [leave_name[i] for i in idx1]; print idx1
 
-	# tick_marks = np.arange(len(axis_labels))
-	# axmatrix.yaxis.set_label_position('right')
-	# axmatrix.set_yticks(tick_marks)
-	# axmatrix.set_yticklabels(axis_labels)
-	# pylab.yticks(fontsize=7)
+    tick_marks = np.arange(len(axis_labels))
+    axmatrix.yaxis.set_label_position('right')
+    axmatrix.set_yticks(tick_marks)
+    axmatrix.set_yticklabels(axis_labels)
+    pylab.yticks(fontsize=7)
 	
-	# Plot colorbar.
-	#axcolor = fig.add_axes([0.91,0.1,0.02,0.6])
-	#pylab.colorbar(im, cax=axcolor)
-	fig.show()
-	fig.savefig('dendrogram.png',bbox_inches='tight')
+    #Plot colorbar.
+    axcolor = fig.add_axes([0.91,0.1,0.02,0.6])
+    pylab.colorbar(im, cax=axcolor)
+    fig.show()
+    fig.savefig('dendrogram.png',bbox_inches='tight')
 
+def index_to_color(iterator):
+    jet = plt.get_cmap('jet')
+    cNorm  = matplotlib.colors.Normalize(vmin=0, vmax=len(iterator))
+    scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
+    return lambda i: scalarMap.to_rgba(i)
+
+def plot_feature_importance(Ls, feature_order):
+    Ls = map(lambda x: map(lambda y: y[1],x), Ls)
+    Ls = zip(*Ls) # Ls = [("ClustersingCoefficient", "ClustersingCoefficient", ..),]
+    
+    freq = {f: [] for f in feature_order}
+
+    for freq_fs in Ls:
+        for f in feature_order:
+            freq[f].append(freq_fs.count(f))
+
+    
+    color_map = index_to_color(freq)
+
+    iterate = sorted(list(freq.keys()),key=lambda x: x,reverse=True)
+
+    first = iterate[0]
+    colorVal = color_map(0)
+    p = plt.bar(range(len(feature_order)), freq[first],  0.35, color=colorVal)
+    prev = freq[first] # previous stack
+
+    ps = [p] # storing axis objects
+    who_is_dominant = [map(lambda x: (first,x),freq[first])]
+
+    for i,k in enumerate(iterate[1:]):
+        colorVal = color_map(i+1)
+        p = plt.bar(range(len(feature_order)), freq[k],  0.35, color=colorVal, bottom=prev)
+        who_is_dominant.append(map(lambda x: (k,x),freq[k]))
+        prev = map(lambda x: x[0]+x[1] , zip(prev,freq[k]))
+        ps.append(p)
+
+    for rank in zip(*who_is_dominant):
+        print sorted(rank, key=lambda x:x[1],reverse=True)
+
+    plt.legend(ps,iterate, bbox_to_anchor=(1.12, 0.4),prop={'size':12})
+    plt.xlabel('Feature Importance')
+    plt.ylabel('Frequency')
+
+    plt.show()
 def main():
-	params = sys.argv
-	filepath = params[1]
-	#feature_names = ["NetworkType","Modularity","ClusteringCoefficient","MeanGeodesicDistance","NumberNodes"]
-	#feature_names = ["SubType","m4_1","m4_2","m4_3"]
-	#types_tobe_extracted = ["Biological","Transportation"]
-	feature_names = ["NetworkType","Modularity","ClusteringCoefficient","DegreeAssortativity"]
-	network_dict = data_read(filepath, *feature_names)#types=types_tobe_extracted)
-	
-	network_tuple = sort_by_feature(network_dict, feature_names)#; network_tuple = [x for x in network_tuple if x[0] in ["Bayesian"]]
-	
+    params = sys.argv
+    filepath = params[1]
+    #feature_names = ["NetworkType","Modularity","ClusteringCoefficient","MeanGeodesicDistance","NumberNodes"]
+    #feature_names = ["SubType","m4_1","m4_2","m4_3"]
+    #types_tobe_extracted = ["Biological","Transportation"]
+    feature_names = ["NetworkType","Modularity","ClusteringCoefficient","MGD/Diameter"]
+    network_dict = data_read(filepath, *feature_names)#types=types_tobe_extracted)
+
+    network_tuple = sort_by_feature(network_dict, feature_names)#; network_tuple = [x for x in network_tuple if x[0] in ["Bayesian"]]
+
     #network_tuple = normalize_mgd(network_tuple)
-	plot_3d(network_tuple, feature_names)
+    plot_3d(network_tuple, feature_names)
 
 
 if __name__ == '__main__':
-	main()
+    main()
 
 

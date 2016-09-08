@@ -1,6 +1,6 @@
 #!/Users/ikeharakansuke/env/bin/python
 from misc import *
-from plot import plot_distance_matrix, MDS_plot
+from plot import plot_distance_matrix, MDS_plot, matrix_clustering
 import numpy as np
 import sys
 from itertools import permutations
@@ -34,8 +34,11 @@ def AUC(features, Y):
 
 	# Over-sampling with SMOTE
 	#print "y_train", y_train
-	smote = SMOTE(ratio=ratio, verbose=False, kind='regular', k=3)
-	smox, smoy = smote.fit_transform(X_train, y_train)
+	#smote = SMOTE(ratio=ratio, verbose=False, kind='regular', k=3)
+	#smox, smoy = smote.fit_transform(X_train, y_train)
+
+	smox, smoy = X_train, y_train
+
 
 
 
@@ -117,8 +120,8 @@ def main():
 	column_names = ["NetworkType","SubType","ClusteringCoefficient","Modularity",#"MeanGeodesicDistance",\
 				    "m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"]
 	feature_names = ["ClusteringCoefficient","MeanGeodesicPath","Modularity","m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"]
-	isSubType = True
-	at_least = 6
+	isSubType = False
+	at_least = 1
 	#X,Y,sub_to_main_type = init("features.csv", column_names, feature_names, isSubType, at_least)
 	network_dict = data_read("features.csv", *column_names)
 	network_dict = filter_float(network_dict)
@@ -128,8 +131,8 @@ def main():
 	
 	distance_matrix, NetworkTypeLabels = binary_classification(features, labels, feature_names, isSubType=isSubType)
 	plot_distance_matrix(distance_matrix, NetworkTypeLabels, sub_to_main_type, isSubType=isSubType)
-	MDS_plot(distance_matrix, NetworkTypeLabels)
-
+	#MDS_plot(distance_matrix, NetworkTypeLabels)
+	matrix_clustering(distance_matrix, NetworkTypeLabels)
 
 	
 

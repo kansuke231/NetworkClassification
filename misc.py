@@ -79,7 +79,7 @@ def XY_filter_unpopular(X, Y, threshold):
 		   np.concatenate(tuple(Y[Y == p] for p in popular),axis=0)
 
 
-def init(filepath, column_names, feature_names, isSubType, at_least):
+def init(filepath, column_names, isSubType, at_least):
 	network_dict = data_read(filepath, *column_names)
 
 	network_dict = filter_float(network_dict)
@@ -87,6 +87,8 @@ def init(filepath, column_names, feature_names, isSubType, at_least):
 
 	v = DictVectorizer(sparse=False)
 	X = v.fit_transform(features)
+
+	feature_order =  map(lambda x:x[0], sorted(v.vocabulary_.items(), key=lambda x:x[1]))
 
 	sub_to_main_type = dict((SubType,NetworkType) for gml, NetworkType, SubType in labels)
 
@@ -97,7 +99,7 @@ def init(filepath, column_names, feature_names, isSubType, at_least):
 
 	X,Y = XY_filter_unpopular(X, Y, at_least)
 
-	return X,Y,sub_to_main_type
+	return X,Y,sub_to_main_type, feature_order
 	
 
 
