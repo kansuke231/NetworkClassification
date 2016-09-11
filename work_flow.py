@@ -16,50 +16,7 @@ import matplotlib.cm as cmx
 
 import scipy.spatial.distance as ssd
 
-def index_to_color(iterator):
-	jet = plt.get_cmap('jet')
-	cNorm  = matplotlib.colors.Normalize(vmin=0, vmax=len(iterator))
-	scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
-	return lambda i: scalarMap.to_rgba(i)
 
-def plot_feature_importance(Ls, feature_order):
-	Ls = map(lambda x: map(lambda y: y[1],x), Ls)
-	Ls = zip(*Ls) # Ls = [("ClustersingCoefficient", "ClustersingCoefficient", ..),]
-	
-	freq = {f: [] for f in feature_order}
-
-	for freq_fs in Ls:
-		for f in feature_order:
-			freq[f].append(freq_fs.count(f))
-
-	
-	color_map = index_to_color(freq)
-
-	iterate = sorted(list(freq.keys()),key=lambda x: x,reverse=True)
-
-	first = iterate[0]
-	colorVal = color_map(0)
-	p = plt.bar(range(len(feature_order)), freq[first],  0.35, color=colorVal)
-	prev = freq[first] # previous stack
-
-	ps = [p] # storing axis objects
-	who_is_dominant = [map(lambda x: (first,x),freq[first])]
-
-	for i,k in enumerate(iterate[1:]):
-		colorVal = color_map(i+1)
-		p = plt.bar(range(len(feature_order)), freq[k],  0.35, color=colorVal, bottom=prev)
-		who_is_dominant.append(map(lambda x: (k,x),freq[k]))
-		prev = map(lambda x: x[0]+x[1] , zip(prev,freq[k]))
-		ps.append(p)
-
-	for rank in zip(*who_is_dominant):
-		print sorted(rank, key=lambda x:x[1],reverse=True)
-
-	plt.legend(ps,iterate, bbox_to_anchor=(1.12, 0.4),prop={'size':12})
-	plt.xlabel('Feature Importance')
-	plt.ylabel('Frequency')
-
-	plt.show()
 
 def sum_confusion_matrix(X, Y, sub_to_main_type, feature_order, isSubType, samplingMethod, N):
 	accum_matrix, NetworkTypeLabels, accum_acc, feature_importances = multiclass_classification(X, Y, sub_to_main_type, feature_order, isSubType, samplingMethod)
