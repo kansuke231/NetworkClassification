@@ -1,9 +1,9 @@
-from misc import init
+from preprocess import init
 from plot import index_to_color
 from sklearn.ensemble import RandomForestClassifier
 import matplotlib.pyplot as plt
 
-Synthesized = ["Scale Free", "ER Network", "Small World"]
+Synthesized = ["Scale Free", "ER Network", "Small World", "Forest Fire Network"]
 
 def make_layers(bp_tuple_L, base_Ys):
 
@@ -64,14 +64,14 @@ def separator(X,Y):
 
 	return real_X, real_Y, synthesized_X, synthesized_Y
 
-def real_to_model(real_X, real_Y, synthesized_X, synthesized_Y):
+def base_to_predict(base_X, base_Y, predict_X, predict_Y):
 	"""
-	Train on the real-world networks, classify synthesized networks
+	Train on the base networks, classify predict networks
 	"""
 	random_forest = RandomForestClassifier()
-	random_forest.fit(real_X, real_Y)
-	y_pred = random_forest.predict(synthesized_X)
-	return zip(y_pred, synthesized_Y)
+	random_forest.fit(base_X, base_Y)
+	y_pred = random_forest.predict(predict_X)
+	return zip(y_pred, predict_Y)
 
 
 
@@ -83,8 +83,15 @@ def main():
 	at_least = 1
 	X,Y, sub_to_main_type, feature_order = init("features.csv", column_names, isSubType, at_least)
 	N = 100
-	#real_X, real_Y, synthesized_X, synthesized_Y = separator(X,Y)
-	bp_tuple_L = real_to_model(*separator(X,Y))
+
+	# synthesized to real
+	real_X, real_Y, synthesized_X, synthesized_Y = separator(X,Y)
+	bp_tuple_L = base_to_predict(synthesized_X, synthesized_Y,real_X, real_Y)
+	Ys, accum_dic =  make_layers(bp_tuple_L, Synthesized)
+	plot_accumulation(Ys, accum_dic)
+
+	# real to synthesized
+	bp_tuple_L = base_to_predict(*separator(X,Y))
 	Ys, accum_dic =  make_layers(bp_tuple_L, Y)
 	plot_accumulation(Ys, accum_dic)
 
