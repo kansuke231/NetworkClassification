@@ -4,29 +4,24 @@ import numpy as np
 from preprocess import init
 from multiclass import multiclass_classification
 from plot import plot_confusion_matrix
-from plot import plot_distance_matrix
-from plot import matrix_clustering
 from plot import plot_feature_importance
 from plot import index_to_color
 from plot import  MDS_plot
-
 import matplotlib.pyplot as plt
-import matplotlib.colors
-import matplotlib.cm as cmx
-
-import scipy.spatial.distance as ssd
-
 import pylab
 import scipy.cluster.hierarchy as sch
-
 import networkx as nx
-
 
 colors_domain = ["#ff0000", "#9c8110", "#00d404", "#00a4d4", "#1d00d4", "#a400c3", "#831e1e"]
 
+
 def sum_confusion_matrix(X, Y, sub_to_main_type, feature_order, isSubType, samplingMethod, N):
-    accum_matrix, NetworkTypeLabels, accum_acc, feature_importances = multiclass_classification(X, Y, sub_to_main_type, feature_order, isSubType, samplingMethod)
+
+    accum_matrix, NetworkTypeLabels, accum_acc, feature_importances = \
+        multiclass_classification(X, Y, sub_to_main_type, feature_order, isSubType, samplingMethod)
+
     list_important_features = [feature_importances]
+
     for i in range(N - 1):
         print "i: ",i
         cm, _, accuracy, feature_importances = multiclass_classification(X, Y, sub_to_main_type, feature_order, isSubType, samplingMethod)
@@ -86,6 +81,7 @@ def build_dendrogram(D, leave_name, sub_to_main_type, isSubType):
     fig.show()
     fig.savefig('only_dendrogram_.png', bbox_inches='tight')
 
+
 def min_or_max(G,func=max):
     return func([attr["weight"] for i,j,attr in G.edges_iter(data=True)])
 
@@ -98,6 +94,7 @@ def threshold(G, alpha):
             thresholded_graph.add_edge(u,v, weight = w["weight"]*50)
 
     return thresholded_graph
+
 
 def graph_draw(G, NetworkTypeLabels, sub_to_main_type):
 
@@ -134,7 +131,6 @@ def graph_draw(G, NetworkTypeLabels, sub_to_main_type):
     plt.show()
 
 
-
 def make_adj_matrix(cm):
     cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
     cm_normalized_filtered = map(lambda ax: map(lambda val: 0.0 if math.isnan(val) else val, ax),cm_normalized)
@@ -154,43 +150,49 @@ def make_adj_matrix(cm):
 
 
 def main():
-    column_names = ["NetworkType","SubType","ClusteringCoefficient","Modularity","DegreeAssortativity","MeanGeodesicDistance","Diameter","MGD/Diameter",
+
+    # The order in this list should be the same as columns in features.csv
+    column_names = ["NetworkType","SubType","ClusteringCoefficient","DegreeAssortativity",
                     "m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"]
 
-    column_names = ["NetworkType","SubType","ClusteringCoefficient","DegreeAssortativity","m4_1","m4_2","m4_3","m4_4","m4_5","m4_6"]
-   
-    
-    isSubType = False
-    at_least = 1#6
-    X,Y,sub_to_main_type, feature_order= init("features.csv", column_names, isSubType, at_least)
-    N = 1000
-    sampling_method = "RandomUnder"
+    isSubType = True
+
+    # at_least is used for filtering out classes whose instance is below this threshold.
+    at_least = 6
+    X, Y, sub_to_main_type, feature_order = init("features.csv", column_names, isSubType, at_least)
+
+    # the number of iteration for multi-class classification
+    N = 10
+
+    # Valid methods are: "RandomOver", "RandomUnder", "SMOTE" and "None"
+    sampling_method = "None"
     print "sampling_method: %s"%sampling_method
     print "Number of instances: %d"%len(Y)
 
-    
-    Matrix, NetworkTypeLabels, sum_accuracy, list_important_features = sum_confusion_matrix(X, Y, sub_to_main_type, feature_order, isSubType, sampling_method, N)
+    Matrix, NetworkTypeLabels, sum_accuracy, list_important_features = \
+        sum_confusion_matrix(X, Y, sub_to_main_type, feature_order, isSubType, sampling_method, N)
+
     average_matrix = np.asarray(map(lambda row: map(lambda e: e/N ,row), Matrix))
     print "average accuracy: %f"%(float(sum_accuracy)/float(N))
-    #plot_feature_importance(list_important_features, feature_order)
+    plot_feature_importance(list_important_features, feature_order)
+
     if not isSubType:
         sub_to_main_type = {v:v for v in sub_to_main_type.values()}
-    plot_confusion_matrix(average_matrix, NetworkTypeLabels, sub_to_main_type, isSubType,"confusion_%s.png"%sampling_method)
+    plot_confusion_matrix(average_matrix, NetworkTypeLabels, sub_to_main_type, isSubType)
+
     dist_matrix = make_symmetric(average_matrix)
-    
 
-    #MDS_plot(dist_matrix, NetworkTypeLabels, sub_to_main_type)
+    MDS_plot(dist_matrix, NetworkTypeLabels, sub_to_main_type)
 
+    # construct an adjacency matrix from the aggrregated confusion matrix.
     adj_matrix = make_adj_matrix(average_matrix)
     
     G = nx.from_numpy_matrix(np.asarray(adj_matrix))
-    #sub_to_main_type = {v:v for v in sub_to_main_type.values()}
-    #graph_draw(G, NetworkTypeLabels, sub_to_main_type)
-    #print NetworkTypeLabels
-    nx.write_edgelist(G, "G_%s.txt"%sampling_method)
-    
-    #plot_distance_matrix(dist_matrix, NetworkTypeLabels, sub_to_main_type, isSubType)
-    #build_dendrogram(dist_matrix, NetworkTypeLabels, sub_to_main_type, isSubType)
+    graph_draw(G, NetworkTypeLabels, sub_to_main_type)
+
+    # uncomment if want to save an unweighted network.
+    #nx.write_edgelist(G, "G_%s.txt"%sampling_method)
+
         
 if __name__ == '__main__':
     main()

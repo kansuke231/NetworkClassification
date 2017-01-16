@@ -1,6 +1,8 @@
 import math
 from sklearn import manifold
 from sklearn.decomposition import PCA
+import pylab
+import scipy.cluster.hierarchy as sch
 import matplotlib.pyplot as plt
 import matplotlib.colors
 import matplotlib.cm as cmx
@@ -50,12 +52,11 @@ def normalize_mgd(network_tuple):
 
 def plot_3d(data, feature_names):
     ts = [t for t,f1,f2,f3 in data]
-
-    colors = ["y","r","c","b","g","k","m"]
     
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    for t,c in zip(set(ts),colors):
+
+    for t,c in zip(set(ts),colors_domain):
         xs = [f1 for network_type,f1,f2,f3 in data if network_type == t]
         ys = [f2 for network_type,f1,f2,f3 in data if network_type == t]
         zs = [f3 for network_type,f1,f2,f3 in data if network_type == t]
@@ -82,15 +83,18 @@ def make_mask(matrix):
 
 def plot_confusion_matrix(cm, NetworkTypeLabels, sub_to_main_type, isSubType,filename=None):
 
-    #norm = matplotlib.colors.BoundaryNorm(bounds,plt.cm.Blues.N)
     Domains = sorted(list(set(sub_to_main_type.values())))
-    #color_map = index_to_color(Domains,"jet")
     color_map = lambda i: colors_domain[i]
-    
+
+    # normalized the confusion matrix by row
     cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    # set 0.0 if the value of a cell is NaN
     cm_normalized_filtered = map(lambda ax: map(lambda val: 0.0 if math.isnan(val) else val, ax),cm_normalized)
 
-    f, ax = plt.subplots()#figsize=(8, 7.5))
+    f, ax = plt.subplots()
+
+    # if the cell's value is 0.0, the color becomes white, which is accomplished by using mask.
     mask = make_mask(cm_normalized_filtered)
     masked_array = np.ma.array(cm_normalized_filtered, mask=mask)
     cmap = matplotlib.cm.jet
@@ -108,13 +112,13 @@ def plot_confusion_matrix(cm, NetworkTypeLabels, sub_to_main_type, isSubType,fil
             i += 1
 
 
+    # Uncomment the code in order to have number on each cell in the confusion matrix.
     # dim = len(cm)
     # for i in range(dim):
     #     for j in range(dim):
     #         if cm[i][j] != 0.0:
     #             ax.text(j, i, cm[i][j], va='center', ha='center', color = "r", size=8)
-    
-    #ax.set_title("Confusion Matrix")
+
     f.colorbar(im)
     tick_marks = np.arange(len(NetworkTypeLabels))
     ax.set_xticks(tick_marks)
@@ -307,8 +311,7 @@ def plot_scikit_lda_3d(X, Y):
 
 
 def matrix_clustering(D, leave_name):
-    import pylab
-    import scipy.cluster.hierarchy as sch
+
     # Compute and plot first dendrogram.
     fig = pylab.figure(figsize=(10,10))
     ax1 = fig.add_axes([0.00, 0.1, 0.2, 0.6])
@@ -351,16 +354,16 @@ def matrix_clustering(D, leave_name):
 
 def plot_feature_importance(Ls, feature_order):
     Ls = map(lambda x: map(lambda y: y[1],x), Ls)
-    Ls = zip(*Ls) # Ls = [("ClustersingCoefficient", "ClustersingCoefficient", ..),]
-    
+    # Ls = [("ClustersingCoefficient", "ClustersingCoefficient", ..),]
+    Ls = zip(*Ls)
+
     freq = {f: [] for f in feature_order}
 
     for freq_fs in Ls:
         for f in feature_order:
             freq[f].append(freq_fs.count(f))
 
-    
-    color_map = index_to_color(freq,"jet")
+    color_map = index_to_color(freq, "jet")
 
     iterate = sorted(list(freq.keys()),key=lambda x: x,reverse=True)
 
@@ -399,6 +402,7 @@ def plot_feature_importance(Ls, feature_order):
 
 
 def main():
+    # this main() is for plotting data points in 3D space of selected features.
     types_tobe_extracted = ["Biological","Technological"]
     feature_names = ["NetworkType","DegreeAssortativity","ClusteringCoefficient","MGD/Diameter"]
     network_dict = data_read("features.csv", *feature_names, types=types_tobe_extracted)
@@ -409,17 +413,17 @@ def main():
 
 
 def main2():
-    x_label = "NumberOfNodes"
-    y_label = "MeanDegree"
+    # this main2() is for plotting data points in 2D space of selected features.
+    x_label = "MeanGeodesicDistance"
+    y_label = "Modularity"
     column_names = ["NetworkType","SubType",x_label,y_label]
-    exclusive_types = ["Economic", "Synthesized"]
+    exclusive_types = ["Economic"]
     isSubType = False
     at_least = 1
     X,Y, sub_to_main_type, feature_order = init("features.csv", column_names, isSubType, at_least, exclusive_types=exclusive_types)
 
     x_index = feature_order.index(x_label)
     y_index = feature_order.index(y_label)
-
 
     plot_2d(X, Y, x_index, y_index, x_label, y_label, xlog_scale=True, ylog_scale=True)
    
